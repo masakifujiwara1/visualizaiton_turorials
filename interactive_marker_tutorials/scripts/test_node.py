@@ -2,6 +2,9 @@
 from __future__ import print_function
 from shutil import move
 
+from matplotlib.lines import lineMarkers
+from geometry_msgs.msg import Point
+
 import rospy
 import copy
 
@@ -30,8 +33,62 @@ def makeBox(msg):
     return box_marker
 
 
+def makeLine():
+    int2_marker = InteractiveMarker()
+    int2_marker.header.frame_id = "map"
+    int2_marker.name = "my2_marker"
+    int2_marker.description = "Line_strip"
+
+    line_marker = Marker()
+
+    line_marker.type = Marker.LINE_STRIP
+    line_marker.action = line_marker.ADD
+    # line_marker.name =
+
+    line_marker.scale.x = 0.03
+    line_marker.scale.y = 0.03
+    line_marker.scale.z = 0.03
+
+    line_marker.color.r = 0.0
+    line_marker.color.g = 0.0
+    line_marker.color.b = 1.0
+    line_marker.color.a = 1.0
+
+    line_marker.pose.orientation.x = 0.0
+    line_marker.pose.orientation.y = 0.0
+    line_marker.pose.orientation.z = 0.0
+    line_marker.pose.orientation.w = 1.0
+
+    line_marker.pose.position.x = 0.0
+    line_marker.pose.position.y = 0.0
+    line_marker.pose.position.z = 0.0
+
+    line_marker.points = []
+
+    first_line_point = Point()
+    first_line_point.x = 0.0
+    first_line_point.y = 0.0
+    first_line_point.z = 0.0
+    line_marker.points.append(first_line_point)
+
+    second_line_point = Point()
+    second_line_point.x = 1.0
+    second_line_point.y = 1.0
+    second_line_point.z = 0.0
+    line_marker.points.append(second_line_point)
+
+    # int2_marker.controls.append(line_marker)
+
+    # pub_line_min_dist.publish(marker)
+    # server.insert(int2_marker, processFeedback)
+    pub_line_min_dist.publish(line_marker)
+    return line_marker
+
+
 if __name__ == "__main__":
     rospy.init_node("simple_marker")
+
+    pub_line_min_dist = rospy.Publisher('~line_min_dist', Marker, queue_size=1)
 
     # create an interactive marker server on the topic namespace simple_marker
     server = InteractiveMarkerServer("simple_marker")
@@ -89,9 +146,19 @@ if __name__ == "__main__":
     move_y_control.always_visible = False
     int_marker.controls.append(move_y_control)
 
+    # write line
+    # int2_marker = InteractiveMarker()
+    # int2_marker.header.frame_id = "map"
+    # int2_marker.name = "my2_marker"
+    # int2_marker.description = "Line_strip"
+
+    # int2_marker.controls.append(makeLine(int2_marker))
+
     # add the interactive marker to our collection &
     # tell the server to call processFeedback() when feedback arrives for it
     server.insert(int_marker, processFeedback)
+
+    makeLine()
 
     # 'commit' changes and send to all clients
     server.applyChanges()
