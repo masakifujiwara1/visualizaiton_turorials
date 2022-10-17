@@ -36,15 +36,18 @@ class cylinder_node:
         self.server = InteractiveMarkerServer("simple_marker")
         menu_handler.insert("Add point", callback=self.addpoint)
         menu_handler.insert("Second Entry", callback=processFeedback)
-        sub_menu_handle = menu_handler.insert("Submenu")
-        menu_handler.insert("First Entry", parent=sub_menu_handle,
-                            callback=processFeedback)
+        sub_menu_handle = menu_handler.insert("Add line")
+        menu_handler.insert("Set point1", parent=sub_menu_handle,
+                            callback=self.setpoint1)
         menu_handler.insert(
-        "Second Entry", parent=sub_menu_handle, callback=processFeedback)
+        "Set point2", parent=sub_menu_handle, callback=self.setpoint2)
         # self.point_list = []
         self.point_num = 1
         self.OLD_TIME = 0
         self.ADD_TIME = 0
+        self.point_num_for_set = 0
+        self.point_num_for_set_x = 0
+        self.point_num_for_set_y = 0
 
     def interactive(self):
         # print(time.time() - BASE_TIME)
@@ -106,6 +109,40 @@ class cylinder_node:
 
         self.server.setPose(feedback.marker_name, pose)
         self.server.applyChanges()
+    
+    def setpoint1(self, feedback):
+        p = feedback.pose.position
+        self.point_num_for_set = int(feedback.control_name)
+        self.point_num_for_set_x = p.x
+        self.point_num_for_set_y = p.y
+        print(p.x, p.y)
+
+    def setpoint2(self, feedback):
+        min_num_x = min_num_y = max_num_x = max_num_y = 0 
+        p = feedback.pose.position
+        end_point = int(feedback.control_name)
+        if self.point_num_for_set > end_point:
+            max_num = self.point_num_for_set
+            max_num_x = self.point_num_for_set_x
+            max_num_y = self.point_num_for_set_y
+
+            min_num = end_point
+            min_num_x = p.x
+            min_num_y = p.y
+        else:
+            max_num = end_point
+            max_num_x = p.x
+            max_num_y = p.y
+
+            min_num = self.point_num_for_set
+            min_num_x = self.point_num_for_set_x
+            min_num_y = self.point_num_for_set_y
+
+        print(p.x, p.y)
+        print(min_num_x, min_num_y, max_num_x, max_num_y)
+        self.line_point = {'POINT_[' + str(min_num) + ']': [min_num_x, min_num_y, 0], 'POINT_[' + str(max_num) + ']': [max_num_x, max_num_y, 0]}
+        LINE_POINT_LIST.append(self.line_point)
+
 
     def addpoint(self, feedback):
         print("add point!")
@@ -287,12 +324,16 @@ class visualization_node:
             POINT_X[1], POINT_Y[1], POINT_Z]}
         self.line_point12 = {'POINT_[2]': [POINT_X[0], POINT_Y[0], POINT_Z], 'POINT_[3]': [
             POINT_X[1], POINT_Y[1], POINT_Z]}
+        self.line_point13 = {'POINT_[1]': [POINT_X[0], POINT_Y[0], POINT_Z], 'POINT_[3]': [
+            POINT_X[1], POINT_Y[1], POINT_Z]}
 
         # print(self.line_point11)
 
         # LINE_POINT_LIST.append(self.list_point2)
         # LINE_POINT_LIST.append(self.list_point11)
-        LINE_POINT_LIST = [self.line_point11, self.line_point12]
+        LINE_POINT_LIST = [self.line_point11]
+        # LINE_POINT_LIST = [self.line_point11, self.line_point12]
+        # LINE_POINT_LIST.append(self.line_point13)
         # print(LINE_POINT_LIST)
         # LINE_POINT_LIST.append(self.list_point3)
 
