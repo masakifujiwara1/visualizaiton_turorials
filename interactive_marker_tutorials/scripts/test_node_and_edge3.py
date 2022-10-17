@@ -33,41 +33,48 @@ class cylinder_node:
     def __init__(self):
         rospy.init_node("simple_marker", anonymous=True)
         self.server = InteractiveMarkerServer("simple_marker")
-        menu_handler.insert("Add point", callback=processFeedback)
+        menu_handler.insert("Add point", callback=self.addpoint)
         menu_handler.insert("Second Entry", callback=processFeedback)
         sub_menu_handle = menu_handler.insert("Submenu")
         menu_handler.insert("First Entry", parent=sub_menu_handle,
                             callback=processFeedback)
         menu_handler.insert(
         "Second Entry", parent=sub_menu_handle, callback=processFeedback)
+        # self.point_list = []
+        self.point_num = 1
         self.OLD_TIME = 0
         self.ADD_TIME = 0
 
     def interactive(self):
         # print(time.time() - BASE_TIME)
-        self.insert_point(0)
+
+        # for i in range(self.point_num):
+        #     self.insert_point(i)
+
+        self.insert_point(0, 0, 0)
+
         # self.server.applyChanges()
         # self.insert_point2(1)
         self.server.insert(self.int_marker, self.processFeedback)
         menu_handler.apply(self.server, self.int_marker.name)
         # self.server.applyChanges()
 
-        self.insert_point(1)
-        self.server.insert(self.int_marker, self.processFeedback)
-        menu_handler.apply(self.server, self.int_marker.name)
+        # self.insert_point(1)
+        # self.server.insert(self.int_marker, self.processFeedback)
+        # menu_handler.apply(self.server, self.int_marker.name)
 
         self.server.applyChanges()
 
         rospy.spin()
 
-    def insert_point(self, i):
+    def insert_point(self, i, x, y):
         self.int_marker = InteractiveMarker()
         # self.int_marker = []
         self.int_marker.header.frame_id = "map"
         self.int_marker.name = "my_marker" + str(i)
         self.int_marker.description = "Simple 1-DOF Control_" + str(i)
-        self.int_marker.pose.position.x = i
-        self.int_marker.pose.position.y = i
+        self.int_marker.pose.position.x = x
+        self.int_marker.pose.position.y = y
         # self.root_marker.append(self.int_marker)
         # write
         self.move_y_control = InteractiveMarkerControl()
@@ -98,6 +105,21 @@ class cylinder_node:
 
         self.server.setPose(feedback.marker_name, pose)
         self.server.applyChanges()
+
+    def addpoint(self, feedback):
+        print("add point!")
+
+        p = feedback.pose.position
+
+        self.insert_point(self.point_num, p.x, p.y)
+
+        self.server.insert(self.int_marker, self.processFeedback)
+        menu_handler.apply(self.server, self.int_marker.name)
+
+        self.server.applyChanges()
+
+        self.point_num += 1
+
 
     def makeMenuMarker(self):
         int_marker = InteractiveMarker()
