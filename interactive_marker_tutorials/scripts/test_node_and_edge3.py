@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 from shutil import move
 
 from matplotlib.lines import lineMarkers
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import PoseStamped
 
+import concurrent.futures
 import threading
 import time
 import rospy
@@ -21,6 +21,7 @@ POINT_X = [0.0]*10
 POINT_Y = [0.0]*10
 POINT_Z = 0.0
 N  = 2
+BASE_TIME = time.time()
 
 # print(POINT_X[1])
 
@@ -28,8 +29,11 @@ class cylinder_node:
     def __init__(self):
         rospy.init_node("simple_marker", anonymous=True)
         self.server = InteractiveMarkerServer("simple_marker")
+        self.OLD_TIME = 0
+        self.ADD_TIME = 0
 
     def interactive(self):
+        # print(time.time() - BASE_TIME)
         self.insert_point(0)
         # self.server.applyChanges()
         # self.insert_point2(1)
@@ -109,6 +113,7 @@ class cylinder_node:
         self.int_marker.controls.append(self.move_y_control)
 
     def processFeedback(self, feedback):
+        TIME = time.time()
         global POINT_X
         global POINT_Y
         global POINT_Z
@@ -117,9 +122,15 @@ class cylinder_node:
         # print(feedback.marker_name + " is now at " +
         #       str(p.x) + ", " + str(p.y) + ", " + str(p.z))
 
-        POINT_X[int(feedback.control_name)] = p.x
-        POINT_Y[int(feedback.control_name)] = p.y
-        POINT_Z = p.z
+        # print(self.ADD_TIME)
+        # if self.ADD_TIME >= 0.5:
+        if (feedback.event_type == InteractiveMarkerFeedback.MOUSE_UP):
+            POINT_X[int(feedback.control_name)] = p.x
+            POINT_Y[int(feedback.control_name)] = p.y
+            POINT_Z = p.z
+            # print("update")
+            # self.ADD_TIME = 0
+        # print(TIME - self.OLD_TIME)
 
         s = "Feedback from marker '" + feedback.marker_name
         s += "' / control '" + feedback.control_name + "'"
@@ -131,7 +142,8 @@ class cylinder_node:
             mp += ", " + str(feedback.mouse_point.z)
             mp += " in frame " + feedback.header.frame_id
         
-        print(feedback.control_name)
+        # print(feedback.control_name)
+        # print(feedback.event_type)
 
         if feedback.event_type == InteractiveMarkerFeedback.BUTTON_CLICK:
             rospy.loginfo(s + ": button click" + mp + ".")
@@ -157,6 +169,10 @@ class cylinder_node:
             rospy.loginfo(s + ": mouse down" + mp + ".")
         elif feedback.event_type == InteractiveMarkerFeedback.MOUSE_UP:
             rospy.loginfo(s + ": mouse up" + mp + ".")
+
+        self.ADD_TIME += TIME
+        self.OLD_TIME = TIME
+
         self.server.applyChanges()
 
     def makeBox(self, msg):
@@ -178,7 +194,7 @@ class visualization_node:
     def __init__(self):
         # rospy.init_node("simple_marker")
         self.pub_line_min_dist = rospy.Publisher(
-            'simple_marker/line_min_dist', MarkerArray, queue_size=1)
+            'simple_marker/line_min_dist', MarkerArray, queue_size=10)
         # self.feedback_sub = rospy.Subscriber(
             # "/simple_marker/feedback", InteractiveMarkerFeedback, self.feedback_callback, queue_size=3)
 
@@ -261,9 +277,12 @@ class visualization_node:
         # list_point2 = np.array([[4.0, 5.0, 0.0], [POINT_X, POINT_Y, POINT_Z], [
         #                          3.0, 0.0, 0.0], [0.0, 3.0, 0.0]])
         # list_point = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
-        list_point2 = np.array([[5.0, 5.0, 0.0], [6.0, 6.0, 0.0]])
-        line = self.makeLine(list_point, id=1)
-        markers.markers.append(line)
+        # list_point2 = np.array([[5.0, 5.0, 0.0], [6.0, 6.0, 0.0]])
+        list_point2 = np.array(
+            [[POINT_X[0], POINT_Y[0], POINT_Z], [POINT_X[1], POINT_Y[1], POINT_Z]])
+
+        # line = self.makeLine(list_point, id=1)
+        # markers.markers.append(line)
         line = self.makeLine(list_point2, id=2)
         markers.markers.append(line)
         self.pub_line_min_dist.publish(markers)
@@ -272,13 +291,17 @@ if __name__ == "__main__":
     rg = visualization_node()
     rd = cylinder_node()
     t1 = threading.Thread(target=rd.interactive)
+    # executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
     # t2 = threading.Thread(target=rg.timer)
 
-    DURATION = 0.25
+    DURATION = 0.5
+
     r = rospy.Rate(1 / DURATION)
     # rd.interactive()
     t1.start()
+    # executor.submit(rd.interactive)
     # t2.start()
+    # rd.interactive()
     while not rospy.is_shutdown():
         # rd.interactive()
         rg.loop()
