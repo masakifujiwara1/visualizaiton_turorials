@@ -24,6 +24,7 @@ POINT_Y = [0.0]*10
 POINT_Z = 0.0
 N  = 2
 BASE_TIME = time.time()
+LINE_POINT_LIST = []
 
 menu_handler = MenuHandler()
 
@@ -191,9 +192,16 @@ class cylinder_node:
         # print(self.ADD_TIME)
         # if self.ADD_TIME >= 0.5:
         if (feedback.event_type == InteractiveMarkerFeedback.MOUSE_UP):
-            POINT_X[int(feedback.control_name)] = p.x
-            POINT_Y[int(feedback.control_name)] = p.y
-            POINT_Z = p.z
+            # POINT_X[int(feedback.control_name)] = p.x
+            # POINT_Y[int(feedback.control_name)] = p.y
+            # POINT_Z = p.z
+            # print(LINE_POINT_LIST)
+            for i in range(len(LINE_POINT_LIST)):
+                # print("POINT_" + str([int(feedback.control_name)]) in LINE_POINT_LIST[i])
+                if ("POINT_" + str([int(feedback.control_name)]) in LINE_POINT_LIST[i]):
+                    LINE_POINT_LIST[i]["POINT_" + str([int(feedback.control_name)])][0] = p.x
+                    LINE_POINT_LIST[i]["POINT_" + str([int(feedback.control_name)])][1] = p.y
+                # POINT_Z = p.z
             # print("update")
             # self.ADD_TIME = 0
         # print(TIME - self.OLD_TIME)
@@ -258,6 +266,7 @@ class cylinder_node:
 
 class visualization_node:
     def __init__(self):
+        global LINE_POINT_LIST
         # rospy.init_node("simple_marker")
         self.pub_line_min_dist = rospy.Publisher(
             'simple_marker/line_min_dist', MarkerArray, queue_size=10)
@@ -266,6 +275,26 @@ class visualization_node:
 
         # create an interactive marker server on the topic namespace simple_marker
         # self.server = InteractiveMarkerServer("simple_marker")
+
+        self.list_point2 = np.array(
+            [[POINT_X[0], POINT_Y[0], POINT_Z], [POINT_X[1], POINT_Y[1], POINT_Z]])
+
+        self.list_point3 = np.array(
+            [[POINT_X[3], POINT_Y[3], POINT_Z], [POINT_X[4], POINT_Y[4], POINT_Z]])
+
+        # self.line_point11 = {'POINT_X[0]':POINT_X[0], 'POINT_Y[0]':POINT_Y[0], 'POINT_Z': POINT_Z}
+        self.line_point11 = {'POINT_[0]': [POINT_X[0], POINT_Y[0], POINT_Z], 'POINT_[1]': [
+            POINT_X[1], POINT_Y[1], POINT_Z]}
+        self.line_point12 = {'POINT_[2]': [POINT_X[0], POINT_Y[0], POINT_Z], 'POINT_[3]': [
+            POINT_X[1], POINT_Y[1], POINT_Z]}
+
+        # print(self.line_point11)
+
+        # LINE_POINT_LIST.append(self.list_point2)
+        # LINE_POINT_LIST.append(self.list_point11)
+        LINE_POINT_LIST = [self.line_point11, self.line_point12]
+        # print(LINE_POINT_LIST)
+        # LINE_POINT_LIST.append(self.list_point3)
 
     def timer(self):
         rospy.Timer(rospy.Duration(2), self.loop)
@@ -326,7 +355,15 @@ class visualization_node:
 
         line_marker.id = id
         # list_point = np.array([[0.0, 0.0, 0.0], [POINT_X, POINT_Y, POINT_Z], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-        for i, (x, y, z) in enumerate(list_point):
+        # for i, (x, y, z,) in enumerate(list_point):
+        #     line_point = Point()
+        #     line_point.x = x
+        #     line_point.y = y
+        #     line_point.z = z
+        #     line_marker.points.append(line_point)
+        # print(list_point.values())
+        for (x, y, z) in list_point.values():
+            # print(x, y, z)
             line_point = Point()
             line_point.x = x
             line_point.y = y
@@ -344,13 +381,28 @@ class visualization_node:
         #                          3.0, 0.0, 0.0], [0.0, 3.0, 0.0]])
         # list_point = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
         # list_point2 = np.array([[5.0, 5.0, 0.0], [6.0, 6.0, 0.0]])
-        list_point2 = np.array(
-            [[POINT_X[0], POINT_Y[0], POINT_Z], [POINT_X[1], POINT_Y[1], POINT_Z]])
+        # list_point2 = np.array(
+        #     [[POINT_X[0], POINT_Y[0], POINT_Z], [POINT_X[1], POINT_Y[1], POINT_Z]])
+
+        # list_point3 = np.array(
+        #     [[POINT_X[3], POINT_Y[3], POINT_Z], [POINT_X[4], POINT_Y[4], POINT_Z]])
+
+        # LINE_POINT_LIST.append(list_point2)
+        # LINE_POINT_LIST.append(list_point3)
 
         # line = self.makeLine(list_point, id=1)
         # markers.markers.append(line)
-        line = self.makeLine(list_point2, id=2)
-        markers.markers.append(line)
+        # print(LINE_POINT_LIST)
+
+        for i in range(len(LINE_POINT_LIST)):
+            line = self.makeLine(LINE_POINT_LIST[i], id=i)
+            markers.markers.append(line)
+        
+        # line = self.makeLine(self.line_point11, id=1)
+        # markers.markers.append(line)
+
+        # line = self.makeLine(list_point2, id=2)
+        # markers.markers.append(line)
         self.pub_line_min_dist.publish(markers)
 
 if __name__ == "__main__":
