@@ -2,6 +2,7 @@
 from shutil import move
 
 from matplotlib.lines import lineMarkers
+from py import process
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import PoseStamped
 
@@ -13,6 +14,7 @@ import copy
 import numpy as np
 
 from interactive_markers.interactive_marker_server import *
+from interactive_markers.menu_handler import *
 from simple_marker import processFeedback
 from visualization_msgs.msg import *
 from nav_msgs.msg import Path
@@ -23,12 +25,21 @@ POINT_Z = 0.0
 N  = 2
 BASE_TIME = time.time()
 
+menu_handler = MenuHandler()
+
 # print(POINT_X[1])
 
 class cylinder_node:
     def __init__(self):
         rospy.init_node("simple_marker", anonymous=True)
         self.server = InteractiveMarkerServer("simple_marker")
+        menu_handler.insert("Add point", callback=processFeedback)
+        menu_handler.insert("Second Entry", callback=processFeedback)
+        sub_menu_handle = menu_handler.insert("Submenu")
+        menu_handler.insert("First Entry", parent=sub_menu_handle,
+                            callback=processFeedback)
+        menu_handler.insert(
+        "Second Entry", parent=sub_menu_handle, callback=processFeedback)
         self.OLD_TIME = 0
         self.ADD_TIME = 0
 
@@ -38,10 +49,13 @@ class cylinder_node:
         # self.server.applyChanges()
         # self.insert_point2(1)
         self.server.insert(self.int_marker, self.processFeedback)
+        menu_handler.apply(self.server, self.int_marker.name)
         # self.server.applyChanges()
 
         self.insert_point(1)
         self.server.insert(self.int_marker, self.processFeedback)
+        menu_handler.apply(self.server, self.int_marker.name)
+
         self.server.applyChanges()
 
         rospy.spin()
@@ -85,7 +99,31 @@ class cylinder_node:
         self.server.setPose(feedback.marker_name, pose)
         self.server.applyChanges()
 
-    
+    def makeMenuMarker(self):
+        int_marker = InteractiveMarker()
+        int_marker.header.frame_id = "base_link"
+        int_marker.pose.position = 0
+        int_marker.scale = 1
+
+        int_marker.name = "context_menu"
+        int_marker.description = "Context Menu\n(Right Click)"
+
+        # make one control using default visuals
+        control = InteractiveMarkerControl()
+        control.interaction_mode = InteractiveMarkerControl.MENU
+        control.description = "Options"
+        control.name = "menu_only_control"
+        int_marker.controls.append(copy.deepcopy(control))
+
+        # make one control showing a box
+        marker = self.makeBox(int_marker)
+        control.markers.append(marker)
+        control.always_visible = True
+        int_marker.controls.append(control)
+
+        self.server.insert(int_marker, processFeedback)
+        menu_handler.apply(self.server, int_marker.name)
+        
     def normalizeQuaternion(self, quaternion_msg):
         norm = quaternion_msg.x**2 + quaternion_msg.y**2 + \
             quaternion_msg.z**2 + quaternion_msg.w**2
@@ -111,6 +149,12 @@ class cylinder_node:
         self.move_y_control.markers.append(self.makeBox(self.int_marker))
         self.move_y_control.always_visible = False
         self.int_marker.controls.append(self.move_y_control)
+
+        self.menu_control = InteractiveMarkerControl()
+        self.menu_control.interaction_mode = InteractiveMarkerControl.MENU
+        self.menu_control.description = "Options"
+        self.menu_control.name = "menu_only_control"
+        self.int_marker.controls.append(self.menu_control)
 
     def processFeedback(self, feedback):
         TIME = time.time()
