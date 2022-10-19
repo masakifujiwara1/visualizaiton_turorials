@@ -149,9 +149,13 @@ class cylinder_node:
 
         # print(p.x, p.y)
         # print(min_num_x, min_num_y, max_num_x, max_num_y)
-        self.line_point = {'POINT_[' + str(min_num) + ']': [min_num_x, min_num_y, 0], 'POINT_[' + str(max_num) + ']': [max_num_x, max_num_y, 0]}
+        distance = self.calc_distance(min_num_x, min_num_y, max_num_x, max_num_y)
+        self.line_point = {'POINT_[' + str(min_num) + ']': [min_num_x, min_num_y, 0], 'POINT_[' + str(max_num) + ']': [max_num_x, max_num_y, 0], 'DISTANCE': distance}
         LINE_POINT_LIST.append(self.line_point)
         # __ = self.calc_ang(min_num_x, min_num_y, max_num_x, max_num_y)
+    
+    def calc_distance(self, minx, miny, maxx, maxy):
+        return (math.sqrt((maxx - minx)**2 + (maxy - miny)**2))
 
     def calc_ang(self, minx, miny, maxx, maxy):
         # x1 = x2 = y1 = 0
@@ -461,8 +465,11 @@ class visualization_node:
         # print(list_point.keys())
         # (point1, point2) = list_point.keys()
         # print(point1)
+        # print(list_point)
+        list_point_ = list_point.copy()
+        del list_point_['DISTANCE']
 
-        for (x, y, z) in list_point.values():
+        for (x, y, z) in list_point_.values():
             # print(x, y, z)
             line_point = Point()
             line_point.x = x
@@ -555,9 +562,10 @@ class visualization_node:
             data["make_line"] = []
             # yaml.dump(data, f)
             for i in range(len(LINE_POINT_LIST)):
-                (point1, point2) = LINE_POINT_LIST[i].keys()
+                (point1, point2, distance) = LINE_POINT_LIST[i].keys()
                 value1 = LINE_POINT_LIST[i][str(point1)]
                 value2 = LINE_POINT_LIST[i][str(point2)]
+                distance_ = LINE_POINT_LIST[i][str(distance)]
                 # list = {
                 #     'id': i,
                 #     str(point1): value1, 
@@ -572,7 +580,8 @@ class visualization_node:
                     'point2': {
                         'point_name': int(re.sub(r"\D", "", point2)),
                         'position': value2
-                    }
+                    },
+                    'distance': distance_
                 }   
                 data["make_line"].append(mylist)
             yaml.safe_dump(data, f, sort_keys=False)
