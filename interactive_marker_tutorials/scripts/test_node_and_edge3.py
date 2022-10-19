@@ -15,6 +15,7 @@ import numpy as np
 import math
 import yaml
 import re
+from std_srvs.srv import Trigger
 
 from interactive_markers.interactive_marker_server import *
 from interactive_markers.menu_handler import *
@@ -359,6 +360,8 @@ class visualization_node:
         # create an interactive marker server on the topic namespace simple_marker
         # self.server = InteractiveMarkerServer("simple_marker")
 
+        self.srv = rospy.Service('/all_save', Trigger, self.save)
+
         self.list_point2 = np.array(
             [[POINT_X[0], POINT_Y[0], POINT_Z], [POINT_X[1], POINT_Y[1], POINT_Z]])
 
@@ -509,7 +512,7 @@ class visualization_node:
         # markers.markers.append(line)
         self.pub_line_min_dist.publish(markers)
     
-    def save(self):
+    def save(self, data):
         self.write_line_yaml()
         self.write_points_yaml()
 
