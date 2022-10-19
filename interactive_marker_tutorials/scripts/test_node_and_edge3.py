@@ -100,6 +100,9 @@ class cylinder_node:
         # self.int_marker.controls.append(copy.deepcopy(self.move_y_control))
 
         self.move_y_control.markers.append(self.makeBox(self.int_marker))
+
+        self.move_y_control.markers.append(self.makeText(self.int_marker, i))
+
         self.move_y_control.always_visible = False
         self.int_marker.controls.append(self.move_y_control)
 
@@ -337,6 +340,21 @@ class cylinder_node:
 
         self.server.applyChanges()
 
+    def makeText(self, msg, i):
+        text_marker = Marker()
+
+        text_marker.type = Marker.TEXT_VIEW_FACING
+        text_marker.scale.x = 1.0
+        text_marker.scale.y = 1.0
+        text_marker.scale.z = 1.0
+        text_marker.color.r = 1.0
+        text_marker.color.g = 1.0
+        text_marker.color.b = 1.0
+        text_marker.color.a = 1.0
+        text_marker.text = str(i)
+
+        return text_marker
+
     def makeBox(self, msg):
         box_marker = Marker()
 
@@ -467,6 +485,9 @@ class visualization_node:
         # print(point1)
         # print(list_point)
         list_point_ = list_point.copy()
+
+        # line_marker.text = str(list_point_['DISTANCE'])
+
         del list_point_['DISTANCE']
 
         for (x, y, z) in list_point_.values():
