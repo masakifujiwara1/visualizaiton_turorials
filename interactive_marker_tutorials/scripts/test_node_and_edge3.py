@@ -13,6 +13,8 @@ import rospy
 import copy
 import numpy as np
 import math
+import yaml
+import re
 
 from interactive_markers.interactive_marker_server import *
 from interactive_markers.menu_handler import *
@@ -20,12 +22,13 @@ from simple_marker import processFeedback
 from visualization_msgs.msg import *
 from nav_msgs.msg import Path
 
-POINT_X = [0.0]*10
-POINT_Y = [0.0]*10
+POINT_X = [0.0]*20
+POINT_Y = [0.0]*20
 POINT_Z = 0.0
 N  = 2
 BASE_TIME = time.time()
 LINE_POINT_LIST = []
+POINT_LIST = []
 
 menu_handler = MenuHandler()
 
@@ -36,7 +39,7 @@ class cylinder_node:
         rospy.init_node("simple_marker", anonymous=True)
         self.server = InteractiveMarkerServer("simple_marker")
         menu_handler.insert("Add point", callback=self.addpoint)
-        menu_handler.insert("Initialize point", callback=processFeedback)
+        menu_handler.insert("Initialize point", callback=self.init_point)
         sub_menu_handle = menu_handler.insert("Add line")
         menu_handler.insert("Set point1", parent=sub_menu_handle, callback=self.setpoint1)
         menu_handler.insert("Set point2", parent=sub_menu_handle, callback=self.setpoint2)
@@ -99,6 +102,10 @@ class cylinder_node:
         self.move_y_control.always_visible = False
         self.int_marker.controls.append(self.move_y_control)
 
+        # self.points = [x, y, 0]
+        self.points = {'POINT_[' + str(i) + ']': [x, y, 0]}
+        POINT_LIST.append(self.points)
+
     def alignMarker(self, feedback):
         pose = feedback.pose
 
@@ -116,7 +123,7 @@ class cylinder_node:
         self.point_num_for_set = int(feedback.control_name)
         self.point_num_for_set_x = p.x
         self.point_num_for_set_y = p.y
-        print(p.x, p.y)
+        # print(p.x, p.y)
 
     def setpoint2(self, feedback):
         min_num_x = min_num_y = max_num_x = max_num_y = 0 
@@ -139,11 +146,11 @@ class cylinder_node:
             min_num_x = self.point_num_for_set_x
             min_num_y = self.point_num_for_set_y
 
-        print(p.x, p.y)
-        print(min_num_x, min_num_y, max_num_x, max_num_y)
+        # print(p.x, p.y)
+        # print(min_num_x, min_num_y, max_num_x, max_num_y)
         self.line_point = {'POINT_[' + str(min_num) + ']': [min_num_x, min_num_y, 0], 'POINT_[' + str(max_num) + ']': [max_num_x, max_num_y, 0]}
         LINE_POINT_LIST.append(self.line_point)
-        __ = self.calc_ang(min_num_x, min_num_y, max_num_x, max_num_y)
+        # __ = self.calc_ang(min_num_x, min_num_y, max_num_x, max_num_y)
 
     def calc_ang(self, minx, miny, maxx, maxy):
         # x1 = x2 = y1 = 0
@@ -174,11 +181,25 @@ class cylinder_node:
         self.server.applyChanges()
 
         self.point_num += 1
+        # vars(self.server.marker_contexts['my_marker0']['last_feedback'])
+        # tmep = vars(self.server.marker_contexts['my_marker0'])
+        # print(temp['last_feedback'])
+        # print(vars(self.server.pending_updates))
+        # print(self.server.marker_contexts.keys())
+        # test = list(self.server.marker_contexts.keys())
+        # print(type(test))
+        # print(test)
+        # print(self.server.marker_contexts[test[0]])
+        # vars(self.server.marker_contexts[test[0]])
+
+        # print(type(self.server.marker_contexts[test[0]]))
+        # print(self.server.marker_contexts['my_marker0']())
 
     def init_point(self, feedback):
         p = feedback.pose.position
         self.init_x = p.x
         self.init_y = p.y
+        print("initialize point: " + str(self.init_x) + "," + str(self.init_y))
 
     def makeMenuMarker(self):
         int_marker = InteractiveMarker()
@@ -259,6 +280,10 @@ class cylinder_node:
                 if ("POINT_" + str([int(feedback.control_name)]) in LINE_POINT_LIST[i]):
                     LINE_POINT_LIST[i]["POINT_" + str([int(feedback.control_name)])][0] = p.x
                     LINE_POINT_LIST[i]["POINT_" + str([int(feedback.control_name)])][1] = p.y
+            for i in range(len(POINT_LIST)):
+                if ("POINT_" + str([int(feedback.control_name)]) in POINT_LIST[i]):
+                    POINT_LIST[i]["POINT_" + str([int(feedback.control_name)])][0] = p.x
+                    POINT_LIST[i]["POINT_" + str([int(feedback.control_name)])][1] = p.y
                 # POINT_Z = p.z
             # print("update")
             # self.ADD_TIME = 0
@@ -428,6 +453,12 @@ class visualization_node:
         #     line_point.z = z
         #     line_marker.points.append(line_point)
         # print(list_point.values())
+        # 
+        
+        # print(list_point.keys())
+        # (point1, point2) = list_point.keys()
+        # print(point1)
+
         for (x, y, z) in list_point.values():
             # print(x, y, z)
             line_point = Point()
@@ -436,6 +467,8 @@ class visualization_node:
             line_point.z = z
             line_marker.points.append(line_point)
         return line_marker
+
+        
 
     def markers(self):
         markers = MarkerArray()
@@ -464,12 +497,83 @@ class visualization_node:
             line = self.makeLine(LINE_POINT_LIST[i], id=i)
             markers.markers.append(line)
         
+        # self.write_line_yaml()
+        # self.write_points_yaml()
+
+        # print(LINE_POINT_LIST)
+        # print(POINT_LIST)
         # line = self.makeLine(self.line_point11, id=1)
         # markers.markers.append(line)
 
         # line = self.makeLine(list_point2, id=2)
         # markers.markers.append(line)
         self.pub_line_min_dist.publish(markers)
+    
+    def save(self):
+        self.write_line_yaml()
+        self.write_points_yaml()
+
+    def write_points_yaml(self):
+        # print("write yaml!")
+        with open('write_points.yaml', 'w') as f:
+            data = {
+                'make_points': {
+
+                }
+            }
+            # data['setting']['list'] = [1, 2, 3]
+            data["make_points"] = []
+            # yaml.dump(data, f)
+            for i in range(len(POINT_LIST)):
+                # print(POINT_LIST[i].keys())
+                point1 = list(POINT_LIST[i].keys())
+                value1 = POINT_LIST[i][point1[0]]
+                # list = {
+                #     'id': i,
+                #     str(point1): value1, 
+                #     str(point2): value2
+                # }  
+                mylist = {
+                    'id': i,
+                    'position': value1
+                }   
+                data["make_points"].append(mylist)
+            yaml.safe_dump(data, f, sort_keys=False)
+    
+    def write_line_yaml(self):
+        # print("write yaml!")
+        with open('write_line.yaml', 'w') as f:
+            data = {
+                'make_line': {
+
+                }
+            }
+            # data['setting']['list'] = [1, 2, 3]
+            data["make_line"] = []
+            # yaml.dump(data, f)
+            for i in range(len(LINE_POINT_LIST)):
+                (point1, point2) = LINE_POINT_LIST[i].keys()
+                value1 = LINE_POINT_LIST[i][str(point1)]
+                value2 = LINE_POINT_LIST[i][str(point2)]
+                # list = {
+                #     'id': i,
+                #     str(point1): value1, 
+                #     str(point2): value2
+                # }  
+                mylist = {
+                    'id': i,
+                    'point1': {
+                        'point_name': int(re.sub(r"\D", "", point1)),
+                        'position': value1
+                    }, 
+                    'point2': {
+                        'point_name': int(re.sub(r"\D", "", point2)),
+                        'position': value2
+                    }
+                }   
+                data["make_line"].append(mylist)
+            yaml.safe_dump(data, f, sort_keys=False)
+            # pass
 
 if __name__ == "__main__":
     rg = visualization_node()

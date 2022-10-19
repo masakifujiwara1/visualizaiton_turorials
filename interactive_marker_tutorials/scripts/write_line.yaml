@@ -1,0 +1,14 @@
+make_line:
+- id: 0
+  point1:
+    point_name: 0
+    position:
+    - 3.4131078720092773
+    - 3.349344491958618
+    - 0
+  point2:
+    point_name: 1
+    position:
+    - -0.8830528259277344
+    - 2.1745667457580566
+    - 0

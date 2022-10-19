@@ -1,0 +1,8 @@
+setting:
+  language: jp
+  list:
+  - &id001
+    - 1
+    - 2
+    - 3
+  - *id001
